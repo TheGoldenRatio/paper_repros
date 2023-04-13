@@ -14,5 +14,5 @@ Fig 2:
 - reformat titles on Fig 2
 - original file failed to execute properly because function defined after it was called
 
-
-
+Table 1:
+- No changes (other than changing file paths to run the .do)
