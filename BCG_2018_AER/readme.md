@@ -1,4 +1,4 @@
-﻿Reproduces figures 1 and 2 of Joshua Blumenstock, Michael Callen, and Tarek Ghani (2018): "Why Do Defaults Affect Behavior? Experimental Evidence from Afghanistan" ( https://doi.org/10.1257/aer.20171676 )
+﻿Reproduces Figure 1, Figure 2, and Table 1 of Joshua Blumenstock, Michael Callen, and Tarek Ghani (2018): "Why Do Defaults Affect Behavior? Experimental Evidence from Afghanistan" ( https://doi.org/10.1257/aer.20171676 )
 
 Modified files from their repro package found here: http://doi.org/10.3886/E116198V1
 
