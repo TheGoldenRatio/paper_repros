@@ -1,0 +1,166 @@
+---
+title: "figure1"
+output: html_document
+date: '2023-04-13'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Repro of Figure 1 of https://doi.org/10.1257/aer.20171676
+
+```{r}
+require(plotrix)
+library(scales)
+library(foreign)
+library(readstata13)
+```
+
+```{r}
+CurlyBraces <- function(x0, x1, y0, y1, pos = 1, direction = 1, depth = 1) {
+  
+  a=c(1,2,3,48,50)    # set flexion point for spline
+  b=c(0,.2,.28,.7,.8) # set depth for spline flexion point
+  
+  curve = spline(a, b, n = 50, method = "natural")$y * depth
+  
+  curve = c(curve,rev(curve))
+  
+  if (pos == 1){
+    a_sequence = seq(x0,x1,length=100)
+    b_sequence = seq(y0,y1,length=100)  
+  }
+  if (pos == 2){
+    b_sequence = seq(x0,x1,length=100)
+    a_sequence = seq(y0,y1,length=100)      
+  }
+  
+  # direction
+  if(direction==1)
+    a_sequence = a_sequence+curve
+  if(direction==2)
+    a_sequence = a_sequence-curve
+  
+  # pos
+  if(pos==1)
+    lines(a_sequence,b_sequence, lwd=1.5,   xpd=NA) # vertical
+  if(pos==2)
+    lines(b_sequence,a_sequence, lwd=1.5, xpd=NA) # horizontal
+  
+}
+```
+
+```{r}
+changes      <- read.dta13("mpaz_master_NATIVE.dta")
+changes$default <- changes$default_contribution
+
+# dates when stuff happens
+payday       <- c("2015-01-21","2015-02-19", "2015-03-18", "2015-04-22", "2015-05-21", "2015-06-21","2015-07-14")
+deadline     <- c("2015-01-15", "2015-02-15", "2015-03-15","2015-04-15", "2015-05-15", "2015-06-15")
+surveys      <- c("2015-03-01","2015-03-13", "2015-05-03","2015-05-11","2015-06-02","2015-06-10","2015-07-02", "2015-07-11")
+other        <- c("2015-03-29","2015-03-31","2015-04-05","2015-04-06","2015-04-09")
+enrollment   <- c("2014-12-30", "2015-01-15")
+current_date <- "2015-08-01"
+
+ytitle <- "Switches per day"
+
+
+
+# Count all switches
+changes$sdates1 <- as.Date(changes$date_switch1, "%d-%b-%y")
+changes$sdates2 <- as.Date(changes$date_switch2, "%d-%b-%y")
+changes$sdates3 <- as.Date(changes$date_switch3, "%d-%b-%y")
+
+sdates1 <- subset(changes, !is.na(sdates1), select=c("plan","default","sdates1"))
+names(sdates1) <- c("plan","default","switch_date")
+sdates2 <- subset(changes, !is.na(sdates2), select=c("plan","default","sdates2"))
+names(sdates2) <- c("plan","default","switch_date")
+sdates3 <- subset(changes, !is.na(sdates3), select=c("plan","default","sdates3"))
+names(sdates3) <- c("plan","default","switch_date")
+
+sdates <- rbind(sdates1,sdates2,sdates3) 
+sdates <- subset(sdates, switch_date>"2014-12-01")
+dtab   <- table(cut(sdates$switch_date, breaks="day"))
+extend_axis <- as.numeric(as.Date(current_date) - as.Date(max(names(dtab))))
+
+dtab_names <- names(dtab)
+dtab <- c(dtab,rep(0,extend_axis))
+new_names <- seq(as.Date(max(names(dtab)))+1,as.Date(current_date), by=1)  
+names(dtab) <- c(dtab_names, as.character(new_names))
+
+# do some stuff to get the axis labels to be pretty
+xpos <- c(0,seq(3, length(dtab), by=7))
+alldates <- seq(min(sdates$switch_date, na.rm=T), max(sdates$switch_date, na.rm=T)+extend_axis, by="day")
+xlab <- format(alldates[xpos],format="%b-%d")
+xlab <- c("",xlab)
+
+# Plot the number of switches per day
+par(mfcol=c(1,1), mar=c(4,3,4,0)+0.1, mgp=c(1.6,1,0))
+plot(dtab, type="p", pch=16, #col=alpha("blue", 0.5),
+     xlim=c(0,length(dtab)+2), ylim=c(0,70),
+     xlab="", ylab=ytitle, cex.axis=2, cex.lab=1.5, axes=FALSE)
+axis(1, pos=0, at=xpos, labels=FALSE)
+axis(2, pos=0)
+
+text(x=xpos, y=par()$usr[3]-0.01*(par()$usr[4]-par()$usr[3]),
+     labels=xlab, srt=45, adj=1, xpd=TRUE)
+
+
+# find the position of the paydays
+abline(v=match(as.Date(deadline), alldates), col="darkRed", lty=2)
+abline(v=match(as.Date(payday), alldates), col="lightBlue", lty=2)
+
+# add study periods
+CurlyBraces(x0=0,x1=60,y0=75,y1=75, pos=2, direction=1, depth=4)
+CurlyBraces(x0=61,x1=length(dtab),y0=75,y1=75, pos=2, direction=1, depth=4)
+mtext("Study Phase 1", side=3, at=30, line=2)
+mtext("Study Phase 2", side=3, at=(length(dtab)-60)/2+60, line=2)
+
+# add the shaded regions
+polygon(c(rep(match(as.Date(enrollment[1]), alldates),2),
+          rep(match(as.Date(enrollment[2]), alldates),2)),
+        c(0,73,73,0), col=rgb(255,204,153,50, max=255), border=FALSE)        
+
+polygon(c(rep(match(as.Date(surveys[1]), alldates)-.5,2),
+          rep(match(as.Date(surveys[2]), alldates)+.5,2)),
+        c(0,73,73,0), col=rgb(192, 192,192,50, max=255), border=FALSE)        
+
+polygon(c(rep(match(as.Date(surveys[3]), alldates)-.5,2),
+          rep(match(as.Date(surveys[4]), alldates)+.5,2)),
+        c(0,73,73,0), col=rgb(192, 192,192,50, max=255), border=FALSE)        
+
+polygon(c(rep(match(as.Date(surveys[5]), alldates)-.5,2),
+          rep(match(as.Date(surveys[6]), alldates)+.5,2)),
+        c(0,73,73,0), col=rgb(192, 192,192,50, max=255), border=FALSE)        
+
+polygon(c(rep(match(as.Date(surveys[7]), alldates)-.5,2),
+          rep(match(as.Date(surveys[8]), alldates)+.5,2)),
+        c(0,73,73,0), col=rgb(192, 192,192,50, max=255), border=FALSE)        
+
+polygon(c(rep(match(as.Date(other[1]), alldates)-.5,2),
+          rep(match(as.Date(other[2]), alldates)+.5,2)),
+        c(0,73,73,0), col=rgb(0,153,0,50, max=255), border=FALSE)        
+
+polygon(c(rep(match(as.Date(other[3]), alldates)-.5,2),
+          rep(match(as.Date(other[4]), alldates)+.5,2)),
+        c(0,73,73,0), col=rgb(0,153,0,50, max=255), border=FALSE)        
+
+polygon(c(rep(match(as.Date(other[5]), alldates)-.5,2),
+          rep(match(as.Date(other[5]), alldates)+.5,2)),
+        c(0,73,73,0), col=rgb(153,153, 255,70, max=255), border=FALSE)        
+
+
+# add legend
+legend(140,65,c("Change deadlines","Paydays","\"Open Enrollment\"","Phone surveys","Consultations","SMS Reminders"), 
+       lty=c(2,2,NA,NA,NA,NA),lwd=c(1,1,NA,NA,NA,NA), pch=c(NA,NA,22,22,22,22), pt.cex=2,
+       col=c("chocolate","lightBlue",NA,NA,NA,NA,NA), 
+       pt.bg=c(NA,NA, rgb(255,204,153,50, max=255), rgb(192,192,192,50, max=255), rgb(0,153,0,50, max=255), rgb(153,123,255,70, max=255)),
+       y.intersp=1.2,
+       box.lwd=1, box.col="grey")
+
+
+
+
+```
+

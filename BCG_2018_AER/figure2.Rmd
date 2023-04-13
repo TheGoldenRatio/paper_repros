@@ -1,0 +1,77 @@
+---
+title: "figure2.Rmd"
+output: html_document
+date: '2023-04-13'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+require(plotrix)
+library(scales)
+library(foreign)
+library(readstata13)
+
+```
+
+```{r}
+
+changes     <- read.dta13("mpaz_master_NATIVE.dta")
+
+# Create 3-panel figure
+switchplot3way <- function(infile, title.top="", ...){
+  # define relevant variables
+  changes$default         <- changes$default_contribution
+  changes$plan            <- changes$plan
+  changes$newrate         <- changes$cbn
+  
+  par(mfcol=c(1,3), mar=c(5,7,10,0)+1, mgp=c(1,2,0))
+  switchplot2(changes, "White", "White Plan (0% match)", yaxis=TRUE,...)
+  par(mar=c(5,0,10,0)+1)
+  switchplot2(changes, "Blue", "Blue Plan (25% match)", title.top=title.top, yaxis=FALSE,...)
+  switchplot2(changes, "Red", "Red Plan (50% match)", yaxis=FALSE,legend=TRUE,...)
+}
+
+# Create single panel with overlaid histograms
+switchplot2 <- function(dat, myPlan="All", title="", title.top="",legend=NA, yaxis=TRUE,
+                        myCex.lab=1, myCex.axis=1.25, myCex.main=1.25, justBack=FALSE, ...){
+  pdat <- dat
+  pdat <- subset(pdat,plan==myPlan)
+
+  c1 <- "#FFA07A"
+  c2 <- "#228B22"
+  c3 <- paste(c1,"30",sep="")
+  c4 <- paste(c2,"30",sep="")
+
+  t <- title
+  
+  l <- list(subset(pdat, default_contribution==0,select=newrate)[,1],
+            subset(pdat, default_contribution==5,select=newrate)[,1])
+
+  multhist(l, col=c(c1,c2), border=c(c1,c2), xlab="",  ann=FALSE,  axes=FALSE, ylim=c(0,1), main="", freq=FALSE,
+           breaks=seq(-.5,10.5,1), space=c(0,0), names.arg=rep(NA,11))#, cex.axis=myCex.axis, cex.main=myCex.main)#, ...)
+  rect(0.2,0,1.8,1,col=c3, lty=2, border=paste(c1,"70",sep=""))
+  rect(10.2,0,11.8,1,col=c4, lty=2, border=paste(c2,"70",sep=""))
+  title(t, cex.main=myCex.main, line=2)
+  title(title.top, cex.main=myCex.main, line=6, col="blue")
+  axis(1, seq(1,21,2), paste(0:10,"%",sep=""), cex.axis=myCex.axis)
+  if(yaxis==TRUE){
+    axis(2, cex.axis=myCex.axis)
+    mtext(side=2, "Fraction of employees", line = 3, cex=myCex.lab)
+  }
+
+  mtext(side=1, "Contribution Rate", line = 3, cex=myCex.lab)
+  
+    legend(legend,c("Current Rate (Default 0%)","Current Rate (Default 5%)", 
+                    "Default Assignment (Default 0%)","Default Assignment (Default 5%)"),
+           fill=c(c1,c2, c3, c4), border=c(c1,c2,paste(c1,"70",sep=""),paste(c2,"70",sep="")), box.lty=c(1,1,2,2),#border=c(1,1,4,4),
+           box.lwd=0, box.col=rgb(.8,.8,.8,.8), bg=rgb(1,1,1,.8), cex=1)
+}
+
+
+switchplot3way(changes)
+
+
+```
